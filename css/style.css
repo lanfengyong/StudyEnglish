@@ -20,12 +20,30 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font);
   background: linear-gradient(135deg, #e0e7ff 0%, #fef3c7 50%, #dcfce7 100%);
   min-height: 100vh;
   color: var(--text);
   line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* 防止长单词/音标撑破布局 */
+.word-card .en,
+.word-card .phonetic,
+.word-card .cn,
+.lesson-line .en,
+.lesson-line .cn,
+.speech-expected,
+.dictation-cn {
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .app {
@@ -1007,20 +1025,124 @@ body {
 
 /* Responsive */
 @media (max-width: 600px) {
+  .app {
+    padding: 10px;
+  }
+
+  .header {
+    padding: 16px;
+  }
+
   .header-top h1 {
     font-size: 1.3rem;
   }
 
+  .panel {
+    padding: 16px;
+  }
+
+  /* 顶部单元选择：竖向排列，选择框占满 */
+  .header-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .unit-select,
+  .lesson-select,
+  #reciteMode {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* 标签横向滚动，避免挤成多行变形 */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
   .tab {
-    min-width: calc(50% - 4px);
-    font-size: 0.8rem;
+    flex: 0 0 auto;
+    min-width: auto;
+    font-size: 0.82rem;
+    padding: 9px 12px;
+    white-space: nowrap;
   }
 
   .dictation-cn {
     font-size: 1.4rem;
   }
 
-  .word-grid {
+  .word-grid,
+  .wrongbook-list {
     grid-template-columns: 1fr;
+  }
+
+  .records-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 默写输入框换行，按钮占满宽度 */
+  .dictation-input-row {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .dictation-input-row .btn {
+    width: 100%;
+  }
+
+  .dictation-stats {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* 每日任务：连续打卡卡片自适应 */
+  .daily-streak {
+    gap: 10px;
+  }
+
+  .streak-card {
+    min-width: calc(33.333% - 7px);
+    padding: 12px 8px;
+  }
+
+  .streak-card .num {
+    font-size: 1.4rem;
+  }
+
+  .daily-task-item {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* 录音打分弹窗 */
+  .speech-modal {
+    padding: 10px;
+  }
+
+  .speech-modal-content {
+    padding: 22px 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .records-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .dictation-cn {
+    font-size: 1.25rem;
+  }
+
+  .streak-card {
+    min-width: calc(50% - 5px);
   }
 }
