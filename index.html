@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4f6ef7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="英语打卡">
+  <title>英语打卡 · 人教PEP三年级上册</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1>🌟 英语打卡小助手</h1>
+        <p class="subtitle">二年级升三年级 · 人教PEP三年级上册</p>
+      </div>
+      <div class="header-controls">
+        <label class="unit-select-label" for="unitSelect">当前单元</label>
+        <select id="unitSelect" class="unit-select"></select>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-tab="daily" role="tab">📬 今日任务<span class="tab-badge" id="dailyTaskBadge" hidden>0</span></button>
+        <button class="tab" data-tab="checkin" role="tab">📋 单词打卡</button>
+        <button class="tab" data-tab="dictation" role="tab">✏️ 单词默写</button>
+        <button class="tab" data-tab="wrongbook" role="tab">📕 错词本<span class="tab-badge" id="wrongBookBadge" hidden>0</span></button>
+        <button class="tab" data-tab="reading" role="tab">🔊 课文跟读</button>
+        <button class="tab" data-tab="recite" role="tab">📖 课文背诵</button>
+        <button class="tab" data-tab="records" role="tab">📊 学习记录</button>
+      </nav>
+    </header>
+
+    <main class="main">
+      <!-- 今日任务 -->
+      <section id="panel-daily" class="panel active" role="tabpanel">
+        <div class="panel-header">
+          <h2>今日任务</h2>
+          <p class="hint" id="dailyDateLine"></p>
+        </div>
+        <div class="daily-streak" id="dailyStreak"></div>
+        <div class="daily-progress-wrap">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="dailyProgress"></div>
+          </div>
+          <p class="progress-text" id="dailyProgressText">0 / 0</p>
+        </div>
+        <div class="daily-task-list" id="dailyTaskList"></div>
+
+        <div class="daily-push-settings">
+          <h3>每日推送提醒</h3>
+          <p class="hint">开启后，到点会推送今日学习任务（需浏览器通知权限）</p>
+          <div class="push-setting-row">
+            <label class="push-switch">
+              <input type="checkbox" id="pushEnabled">
+              <span>开启每日提醒</span>
+            </label>
+          </div>
+          <div class="push-setting-row">
+            <label for="pushTime">提醒时间</label>
+            <input type="time" id="pushTime" value="19:00">
+          </div>
+          <div class="push-setting-actions">
+            <button type="button" class="btn btn-primary" id="pushRequestPerm">开启通知权限</button>
+            <button type="button" class="btn" id="pushTestNotify">立即测试推送</button>
+          </div>
+          <p class="push-status" id="pushStatus"></p>
+          <p class="hint push-note">说明：推送在本地触发，电脑/iPad 需保持浏览器在后台运行；添加到主屏幕后效果更好。</p>
+        </div>
+      </section>
+
+      <!-- 单词打卡 -->
+      <section id="panel-checkin" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>单词打卡</h2>
+          <p class="hint">点击 🎤 可录音跟读并自动打分（≥75 分视为通过）</p>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="checkinProgress"></div>
+          </div>
+          <p class="progress-text" id="checkinProgressText">0 / 0</p>
+        </div>
+        <div class="filter-row">
+          <button class="btn btn-sm" id="checkinFilterAll">全部</button>
+          <button class="btn btn-sm" id="checkinFilterUndone">未打卡</button>
+          <button class="btn btn-sm" id="checkinFilterDone">已打卡</button>
+        </div>
+        <div class="word-grid" id="wordGrid"></div>
+      </section>
+
+      <!-- 单词默写 -->
+      <section id="panel-dictation" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>单词默写</h2>
+          <p class="hint">看中文，写出英文单词（不区分大小写）</p>
+        </div>
+        <div class="dictation-card" id="dictationCard">
+          <div class="dictation-stats">
+            <span>正确 <strong id="dictationCorrect">0</strong></span>
+            <span>错误 <strong id="dictationWrong">0</strong></span>
+            <span>第 <strong id="dictationIndex">1</strong> 题</span>
+          </div>
+          <p class="dictation-cn" id="dictationCn">——</p>
+          <p class="dictation-phonetic" id="dictationPhonetic"></p>
+          <div class="dictation-input-row">
+            <input type="text" id="dictationInput" class="dictation-input" placeholder="输入英文单词" autocomplete="off" spellcheck="false">
+            <button class="btn btn-primary" id="dictationSubmit">提交</button>
+          </div>
+          <p class="dictation-feedback" id="dictationFeedback"></p>
+          <div class="dictation-actions">
+            <button class="btn" id="dictationHint">提示首字母</button>
+            <button class="btn" id="dictationSpeak">🔊 听发音</button>
+            <button class="btn btn-primary" id="dictationNext" hidden>下一题</button>
+          </div>
+        </div>
+        <button class="btn btn-outline" id="dictationRestart">重新开始本单元</button>
+      </section>
+
+      <!-- 错词本 -->
+      <section id="panel-wrongbook" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>错词本</h2>
+          <p class="hint">默写错误的单词会自动收录，连续答对 2 次后自动移出</p>
+        </div>
+        <div class="wrongbook-summary" id="wrongbookSummary"></div>
+        <div class="filter-row">
+          <button class="btn btn-sm active-filter" id="wrongbookFilterAll">全部单元</button>
+          <button class="btn btn-sm" id="wrongbookFilterUnit">当前单元</button>
+        </div>
+        <div class="wrongbook-list" id="wrongbookList"></div>
+        <div class="wrongbook-actions">
+          <button class="btn btn-primary" id="wrongbookStartPractice">开始错词复习</button>
+          <button class="btn btn-outline" id="wrongbookClearMastered">清除已掌握</button>
+          <button class="btn btn-danger" id="wrongbookClearAll">清空错词本</button>
+        </div>
+
+        <div class="wrongbook-practice" id="wrongbookPractice" hidden>
+          <h3>错词复习</h3>
+          <div class="dictation-card">
+            <div class="dictation-stats">
+              <span>正确 <strong id="wbCorrect">0</strong></span>
+              <span>错误 <strong id="wbWrong">0</strong></span>
+              <span>第 <strong id="wbIndex">1</strong> / <strong id="wbTotal">0</strong> 题</span>
+            </div>
+            <p class="dictation-cn" id="wbCn">——</p>
+            <p class="dictation-phonetic" id="wbPhonetic"></p>
+            <div class="dictation-input-row">
+              <input type="text" id="wbInput" class="dictation-input" placeholder="输入英文单词" autocomplete="off" spellcheck="false">
+              <button class="btn btn-primary" id="wbSubmit">提交</button>
+            </div>
+            <p class="dictation-feedback" id="wbFeedback"></p>
+            <div class="dictation-actions">
+              <button class="btn" id="wbHint">提示首字母</button>
+              <button class="btn" id="wbSpeak">🔊 听发音</button>
+              <button class="btn btn-primary" id="wbNext" hidden>下一题</button>
+              <button class="btn btn-outline" id="wbExit">退出复习</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 课文跟读 -->
+      <section id="panel-reading" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>课文跟读</h2>
+          <p class="hint">每句可点击「跟读打分」录音，系统自动评分</p>
+          <select id="lessonSelectReading" class="lesson-select"></select>
+        </div>
+        <div class="lesson-card">
+          <div class="audio-controls">
+            <button class="btn btn-primary btn-lg" id="playLessonAudio">▶ 播放课文音频</button>
+            <button class="btn" id="stopLessonAudio">⏹ 停止</button>
+            <span class="audio-tip" id="audioTip">音频未找到时将使用浏览器朗读</span>
+          </div>
+          <div class="lesson-lines" id="readingLines"></div>
+          <button class="btn btn-success" id="markReadingDone">✅ 完成跟读打卡</button>
+        </div>
+      </section>
+
+      <!-- 课文背诵 -->
+      <section id="panel-recite" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>课文背诵</h2>
+          <p class="hint">背诵后可录音打分，检验发音和流利度</p>
+          <select id="lessonSelectRecite" class="lesson-select"></select>
+        </div>
+        <div class="recite-settings">
+          <label>隐藏模式：</label>
+          <select id="reciteMode">
+            <option value="half">遮住一半单词</option>
+            <option value="blank">全部遮住（点击查看）</option>
+            <option value="cn">只看中文提示</option>
+          </select>
+        </div>
+        <div class="lesson-card">
+          <div class="lesson-lines" id="reciteLines"></div>
+          <div class="recite-actions">
+            <button class="btn" id="reciteRevealAll">显示全部</button>
+            <button class="btn" id="reciteHideAll">重新遮盖</button>
+            <button class="btn btn-success" id="markReciteDone">✅ 背诵通过打卡</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 学习记录 -->
+      <section id="panel-records" class="panel" role="tabpanel">
+        <div class="panel-header">
+          <h2>学习记录</h2>
+          <p class="hint">数据保存在本机浏览器，不会上传到网络</p>
+        </div>
+        <div class="records-summary" id="recordsSummary"></div>
+        <div class="records-detail" id="recordsDetail"></div>
+        <div class="records-actions">
+          <button class="btn btn-outline" id="exportRecords">导出记录 (JSON)</button>
+          <button class="btn btn-danger" id="clearRecords">清空所有记录</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>音频请放入 <code>audio/</code> 目录，详见 <code>audio/README.txt</code></p>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- 录音打分弹窗 -->
+  <div class="speech-modal" id="speechModal" hidden>
+    <div class="speech-modal-backdrop" id="speechModalBackdrop"></div>
+    <div class="speech-modal-content">
+      <button type="button" class="speech-modal-close" id="speechModalClose" aria-label="关闭">×</button>
+      <h3 id="speechModalTitle">录音打分</h3>
+      <p class="speech-expected" id="speechExpected"></p>
+      <p class="speech-expected-cn" id="speechExpectedCn"></p>
+      <p class="speech-hint" id="speechHint">先听标准发音，再点击录音跟读</p>
+
+      <div class="speech-controls">
+        <button type="button" class="btn" id="speechListenBtn">🔊 听标准发音</button>
+        <button type="button" class="btn btn-primary btn-lg speech-record-btn" id="speechRecordBtn">🎤 开始录音</button>
+      </div>
+
+      <div class="speech-status" id="speechStatus"></div>
+
+      <div class="speech-result" id="speechResult" hidden>
+        <div class="score-circle" id="scoreCircle">0</div>
+        <div class="score-stars" id="scoreStars"></div>
+        <p class="score-label" id="scoreLabel"></p>
+        <p class="speech-transcript" id="speechTranscript"></p>
+        <div class="speech-result-actions">
+          <button type="button" class="btn" id="speechReplayBtn" hidden>🔁 回放我的录音</button>
+          <button type="button" class="btn btn-primary" id="speechRetryBtn">再试一次</button>
+          <button type="button" class="btn btn-success" id="speechDoneBtn">完成</button>
+        </div>
+      </div>
+
+      <div class="speech-manual" id="speechManual" hidden>
+        <p class="hint">当前环境无法自动识别，请回放录音后自评：</p>
+        <div class="manual-rating">
+          <button type="button" class="btn manual-btn" data-rating="55">还需练习</button>
+          <button type="button" class="btn manual-btn" data-rating="75">还不错</button>
+          <button type="button" class="btn manual-btn btn-primary" data-rating="92">很棒！</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/speech-score.js"></script>
+  <script src="js/daily-push.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
