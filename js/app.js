@@ -30,6 +30,7 @@ const App = {
     this.bindRecords();
     this.bindSpeechModal();
     this.bindDaily();
+    this.setupSpeechUnlock();
     this.renderAll();
     DailyPush.init(() => this.getRecords(), (r) => this.saveRecords(r));
     this.setupServiceWorkerMessages();
@@ -1441,20 +1442,68 @@ const App = {
     this.playAudioOrSpeak(word.audio, word.en);
   },
 
+  // iOS Safari 需在用户手势内首次触发 TTS 才能解锁后续程序化朗读
+  setupSpeechUnlock() {
+    const unlock = () => this.ensureSpeechUnlocked();
+    document.addEventListener('touchend', unlock, { passive: true });
+    document.addEventListener('click', unlock);
+    document.addEventListener('pointerdown', unlock);
+  },
+
+  ensureSpeechUnlocked() {
+    if (this._speechUnlocked || !('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+      window.speechSynthesis.resume();
+      this._speechUnlocked = true;
+    } catch (e) {
+      /* 忽略解锁失败 */
+    }
+  },
+
   speakText(text) {
-    window.speechSynthesis.cancel();
+    if (!('speechSynthesis' in window)) {
+      this.showToast('当前浏览器不支持语音朗读');
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      /* ignore */
+    }
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
-    utter.rate = 0.85;
+    utter.rate = 0.8;
     const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find((v) => v.lang.startsWith('en'));
+    const enVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
     if (enVoice) utter.voice = enVoice;
     window.speechSynthesis.speak(utter);
+    // iOS 偶发暂停，主动恢复
+    try {
+      window.speechSynthesis.resume();
+    } catch (e) {
+      /* ignore */
+    }
   },
 
   playAudioOrSpeak(src, fallbackText) {
-    const audio = new Audio(src);
-    audio.play().catch(() => this.speakText(fallbackText));
+    // 先在手势内解锁语音，保证音频缺失时能回退朗读（iOS 关键）
+    this.ensureSpeechUnlocked();
+    let audio;
+    try {
+      audio = new Audio(src);
+    } catch (e) {
+      this.speakText(fallbackText);
+      return;
+    }
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.catch(() => this.speakText(fallbackText));
+    } else {
+      audio.addEventListener('error', () => this.speakText(fallbackText));
+    }
   },
 
   showToast(msg) {
