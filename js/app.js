@@ -16,6 +16,9 @@ const App = {
   readingLineIndex: -1,
   speechSession: null,
   speechRecording: false,
+  // 是否存在真人 mp3 音频；默认 false，启动时探测。
+  // 为 false 时点击直接同步朗读，保证 iOS Safari 能发声。
+  audioAvailable: false,
 
   init() {
     this.loadState();
@@ -31,6 +34,7 @@ const App = {
     this.bindSpeechModal();
     this.bindDaily();
     this.setupSpeechUnlock();
+    this.probeAudioAvailability();
     this.renderAll();
     DailyPush.init(() => this.getRecords(), (r) => this.saveRecords(r));
     this.setupServiceWorkerMessages();
@@ -971,6 +975,15 @@ const App = {
     if (!lesson) return;
 
     this.stopLessonAudio();
+    this.ensureSpeechUnlocked();
+
+    // 没有真人音频：逐句同步朗读（iOS 关键）
+    if (this.audioAvailable === false) {
+      document.getElementById('audioTip').textContent = '正在用浏览器朗读课文…';
+      this.speakLessonLines(lesson.lines, 0);
+      return;
+    }
+
     const audio = new Audio(lesson.audio);
     this.lessonAudio = audio;
 
@@ -1463,7 +1476,7 @@ const App = {
     }
   },
 
-  speakText(text) {
+  speakText(text, onEnd) {
     if (!('speechSynthesis' in window)) {
       this.showToast('当前浏览器不支持语音朗读');
       return;
@@ -1479,6 +1492,7 @@ const App = {
     const voices = window.speechSynthesis.getVoices();
     const enVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
     if (enVoice) utter.voice = enVoice;
+    if (typeof onEnd === 'function') utter.onend = onEnd;
     window.speechSynthesis.speak(utter);
     // iOS 偶发暂停，主动恢复
     try {
@@ -1488,9 +1502,48 @@ const App = {
     }
   },
 
+  // 逐句朗读课文并高亮当前句（首句在用户手势内触发，后续靠 onend 链式播放）
+  speakLessonLines(lines, index) {
+    if (!lines || index >= lines.length) {
+      const tip = document.getElementById('audioTip');
+      if (tip) tip.textContent = '朗读完成';
+      return;
+    }
+    this.highlightReadingLine(index);
+    this.speakText(lines[index].en, () => {
+      this.speakLessonLines(lines, index + 1);
+    });
+  },
+
+  // 启动时探测是否放置了真人 mp3 音频。未放置则走 TTS，
+  // 并让点击时同步朗读（避免 iOS Safari 异步回调内被拦截而无声）。
+  probeAudioAvailability() {
+    const sample = PEP_GRADE3_BOOK?.units?.[0]?.words?.[0]?.audio;
+    if (!sample) {
+      this.audioAvailable = false;
+      return;
+    }
+    fetch(sample, { method: 'GET', cache: 'no-store' })
+      .then((r) => {
+        const type = r.headers.get('content-type') || '';
+        // 命中真实音频（存在且不是 404 HTML 页面）才算可用
+        this.audioAvailable = r.ok && !type.includes('text/html');
+      })
+      .catch(() => {
+        this.audioAvailable = false;
+      });
+  },
+
   playAudioOrSpeak(src, fallbackText) {
-    // 先在手势内解锁语音，保证音频缺失时能回退朗读（iOS 关键）
+    // 先在手势内解锁语音
     this.ensureSpeechUnlocked();
+
+    // 没有真人音频：直接同步朗读（iOS 关键，必须在用户手势内调用）
+    if (this.audioAvailable === false) {
+      this.speakText(fallbackText);
+      return;
+    }
+
     let audio;
     try {
       audio = new Audio(src);
@@ -1500,9 +1553,15 @@ const App = {
     }
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.then === 'function') {
-      playPromise.catch(() => this.speakText(fallbackText));
+      playPromise.catch(() => {
+        this.audioAvailable = false;
+        this.speakText(fallbackText);
+      });
     } else {
-      audio.addEventListener('error', () => this.speakText(fallbackText));
+      audio.addEventListener('error', () => {
+        this.audioAvailable = false;
+        this.speakText(fallbackText);
+      });
     }
   },
 
